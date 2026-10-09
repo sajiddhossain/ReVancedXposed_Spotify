@@ -1,3 +1,8 @@
+/*
+ * Patched by: _sajiddz  (Discord: 6aq4)
+ * Fork of pizzaschleppa/ReVancedXposed_Spotify
+ * Updated for Spotify 9.1.90+
+ */
 package io.github.chsbuffer.revancedxposed.spotify.misc
 
 import app.revanced.extension.shared.Logger
@@ -17,6 +22,8 @@ import java.lang.reflect.Field
 
 @Suppress("UNCHECKED_CAST")
 fun SpotifyHook.UnlockPremium() {
+
+    Logger.printInfo { "${ModInfo.TAG} UnlockPremium loaded — Patched by ${ModInfo.AUTHOR} (ds: ${ModInfo.DISCORD})" }
 
     // --- 1. ATTRIBUTE UNLOCK (CORE PREMIUM) ---
     // Use 'after' to intercept the result.
