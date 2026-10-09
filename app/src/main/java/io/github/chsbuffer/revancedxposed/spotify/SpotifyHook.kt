@@ -19,7 +19,6 @@ class SpotifyHook(
         add(::Extension)
         add(::SanitizeSharingLinks)
         add(::FixThirdPartyLaunchersWidgets)
-        add(::NHB)
     }.toTypedArray()
 
     // ══════════════════════════════════════════════════════
