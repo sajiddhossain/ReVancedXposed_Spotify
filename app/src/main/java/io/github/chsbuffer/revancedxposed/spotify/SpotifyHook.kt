@@ -102,16 +102,19 @@ class SpotifyHook(
             XposedBridge.hookAllMethods(httpConnectionImpl, "onHeaders", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: HookParam) {
                     val resp = param.args[0] ?: return
-                    val code = runCatching {
-                        val f = resp.javaClass.getDeclaredField("statusCode")
+                    val status = runCatching {
+                        val f = resp.javaClass.getDeclaredField("status")
                         f.isAccessible = true
                         f.getInt(resp)
-                    }.getOrNull() ?: runCatching {
-                        val m = resp.javaClass.getMethod("getStatusCode")
-                        m.invoke(resp) as Int
                     }.getOrNull()
-                    val fields = resp.javaClass.declaredFields.map { "${it.name}:${it.type.simpleName}" }.joinToString(",")
-                    XposedBridge.log("NHB RESP: code=$code fields=[$fields]")
+                    val respUrl = runCatching {
+                        val f = resp.javaClass.getDeclaredField("url")
+                        f.isAccessible = true
+                        f.get(resp) as? String
+                    }.getOrNull() ?: ""
+                    if (respUrl.contains("playplay") || respUrl.contains("storage-resolve") || (status != null && status >= 400)) {
+                        XposedBridge.log("NHB RESP: status=$status url=$respUrl")
+                    }
                 }
             })
 
