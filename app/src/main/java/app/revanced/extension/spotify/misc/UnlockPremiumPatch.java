@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import android.util.Log;
 import app.revanced.extension.shared.Logger;
 import io.github.chsbuffer.revancedxposed.XposedHelpers;
 
@@ -89,32 +90,39 @@ public final class UnlockPremiumPatch {
      * Injection point. Override account attributes.
      */
     public static void overrideAttributes(Map<String, ?> attributes) {
+        Log.i("ReVancedXposed", "overrideAttributes called, map size=" + attributes.size());
         try {
             for (OverrideAttribute override : PREMIUM_OVERRIDES) {
                 var attribute = attributes.get(override.key);
 
                 if (attribute == null) {
                     if (override.isExpected) {
-                        Logger.printException(() -> "Attribute " + override.key + " expected but not found");
+                        Log.w("ReVancedXposed", "Attribute " + override.key + " expected but NOT FOUND");
                     }
                     continue;
                 }
 
                 Object overrideValue = override.overrideValue;
                 Object originalValue;
-                originalValue = XposedHelpers.getObjectField(attribute, "value_");
-
-                if (overrideValue.equals(originalValue)) {
+                try {
+                    originalValue = XposedHelpers.getObjectField(attribute, "value_");
+                } catch (Exception ex) {
+                    Log.e("ReVancedXposed", "Failed to get value_ from attribute " + override.key +
+                            " (class=" + attribute.getClass().getName() + "): " + ex.getMessage());
                     continue;
                 }
 
-                Logger.printInfo(() -> "Overriding account attribute " + override.key +
-                        " from " + originalValue + " to " + overrideValue);
+                if (overrideValue.equals(originalValue)) {
+                    Log.d("ReVancedXposed", "Attribute " + override.key + " already correct: " + originalValue);
+                    continue;
+                }
 
+                Log.i("ReVancedXposed", "Overriding " + override.key + ": " + originalValue + " -> " + overrideValue);
                 XposedHelpers.setObjectField(attribute, "value_", overrideValue);
             }
+            Log.i("ReVancedXposed", "overrideAttributes complete");
         } catch (Exception ex) {
-            Logger.printException(() -> "overrideAttributes failure", ex);
+            Log.e("ReVancedXposed", "overrideAttributes failure: " + ex.getMessage(), ex);
         }
     }
 

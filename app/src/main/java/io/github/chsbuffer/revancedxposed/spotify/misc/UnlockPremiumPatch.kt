@@ -23,17 +23,23 @@ import java.lang.reflect.Field
 @Suppress("UNCHECKED_CAST")
 fun SpotifyHook.UnlockPremium() {
 
-    Logger.printInfo { "${ModInfo.TAG} UnlockPremium loaded — Patched by ${ModInfo.AUTHOR} (ds: ${ModInfo.DISCORD})" }
+    XposedBridge.log("UnlockPremium: starting hook setup")
 
     // --- 1. ATTRIBUTE UNLOCK (CORE PREMIUM) ---
     runCatching {
         ::productStateProtoFingerprint.hookMethod {
             after { param ->
-                val result = param.result as? Map<String, *> ?: return@after
+                val result = param.result as? Map<String, *> ?: run {
+                    XposedBridge.log("UnlockPremium: productStateProto fired but result is null or not Map (${param.result?.javaClass})")
+                    return@after
+                }
+                XposedBridge.log("UnlockPremium: productStateProto FIRED, map keys=${result.keys.take(5)}, size=${result.size}")
                 UnlockPremiumPatch.overrideAttributes(result)
+                XposedBridge.log("UnlockPremium: overrideAttributes done")
             }
         }
-    }.onFailure { Logger.printInfo { "productStateProto hook failed: ${it.message}" } }
+        XposedBridge.log("UnlockPremium: productStateProto hook INSTALLED OK")
+    }.onFailure { XposedBridge.log("UnlockPremium: productStateProto hook FAILED: ${it.message}") }
 
     // --- 2. POPULAR TRACKS (ARTIST PAGE) ---
     runCatching {
@@ -48,7 +54,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         }
-    }.onFailure { Logger.printInfo { "buildQueryParameters hook failed: ${it.message}" } }
+    }.onFailure { XposedBridge.log("UnlockPremium: buildQueryParameters hook FAILED: ${it.message}") }
 
     // --- 3. GOOGLE ASSISTANT (FIX URIs) ---
     runCatching {
@@ -68,7 +74,7 @@ fun SpotifyHook.UnlockPremium() {
                 safeRemoveStation(clazz.findField("url"), result)
             }
         }
-    }.onFailure { Logger.printInfo { "contextFromJson hook failed: ${it.message}" } }
+    }.onFailure { XposedBridge.log("UnlockPremium: contextFromJson hook FAILED: ${it.message}") }
 
     // --- 4. ANTI-SHUFFLE (GOOGLE ASSISTANT) ---
     runCatching {
@@ -81,7 +87,7 @@ fun SpotifyHook.UnlockPremium() {
                     param.thisObject?.callMethod("shufflingContext", false)
                 }
             })
-    }.onFailure { Logger.printDebug { "PlayerOptionOverrides hook failed: ${it.message}" } }
+    }.onFailure { XposedBridge.log("UnlockPremium: PlayerOptionOverrides hook FAILED: ${it.message}") }
 
     // --- 5. CONTEXT MENU CLEANUP (REMOVE ADS) ---
     runCatching {
@@ -105,7 +111,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         })
-    }.onFailure { Logger.printDebug { "ContextMenu hook failed: ${it.message}" } }
+    }.onFailure { XposedBridge.log("UnlockPremium: ContextMenu hook FAILED: ${it.message}") }
 
     // --- 6. REMOVE AD SECTIONS (HOME & BROWSE) ---
     runCatching {
@@ -118,7 +124,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         }
-    }.onFailure { Logger.printInfo { "homeStructure hook failed: ${it.message}" } }
+    }.onFailure { XposedBridge.log("UnlockPremium: homeStructure hook FAILED: ${it.message}") }
 
     runCatching {
         ::browseStructureGetSectionsFingerprint.hookMethod {
@@ -130,7 +136,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         }
-    }.onFailure { Logger.printInfo { "browseStructure hook failed: ${it.message}" } }
+    }.onFailure { XposedBridge.log("UnlockPremium: browseStructure hook FAILED: ${it.message}") }
 
     // --- 7. BLOCK AD POPUPS (PENDRAGON) ---
     runCatching {
@@ -152,5 +158,5 @@ fun SpotifyHook.UnlockPremium() {
 
         ::pendragonJsonFetchMessageRequestFingerprint.hookMethod(replaceWithRxError)
         ::pendragonJsonFetchMessageListRequestFingerprint.hookMethod(replaceWithRxError)
-    }.onFailure { Logger.printInfo { "pendragon hook failed: ${it.message}" } }
+    }.onFailure { XposedBridge.log("UnlockPremium: pendragon hook FAILED: ${it.message}") }
 }
