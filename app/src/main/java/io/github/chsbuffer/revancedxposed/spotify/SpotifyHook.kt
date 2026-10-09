@@ -53,6 +53,7 @@ class SpotifyHook(
         "/eventdelivery/",
         "/event-service/",
         "pitoken/",
+        "track-error/v1/errors",
     )
 
     fun NHB() {
@@ -86,6 +87,14 @@ class SpotifyHook(
                         if (NHB_BLOCKED_DETECTION_SEGMENTS.any { url.contains(it, true) }) {
                             XposedBridge.log("NHB DETECT-BLOCK: $url")
                             param.result = null
+                            return
+                        }
+
+                        // Rewrite product=0 (free) to product=9 (premium) in storage-resolve
+                        if (url.contains("storage-resolve") && url.contains("product=0")) {
+                            val newUrl = url.replace("product=0", "product=9")
+                            urlField.set(req, newUrl)
+                            XposedBridge.log("NHB REWRITE product=0->9: $newUrl")
                             return
                         }
 
