@@ -7,6 +7,7 @@ import io.github.chsbuffer.revancedxposed.XC_MethodHook
 import io.github.chsbuffer.revancedxposed.XposedBridge
 import io.github.chsbuffer.revancedxposed.BaseHook
 import io.github.chsbuffer.revancedxposed.injectHostClassLoaderToSelf
+import io.github.chsbuffer.revancedxposed.spotify.misc.UnlockPremium
 import io.github.chsbuffer.revancedxposed.spotify.misc.privacy.SanitizeSharingLinks
 import io.github.chsbuffer.revancedxposed.spotify.misc.widgets.FixThirdPartyLaunchersWidgets
 
@@ -18,7 +19,9 @@ class SpotifyHook(
     override val hooks = buildList {
         add(::Extension)
         add(::SanitizeSharingLinks)
+        add(::UnlockPremium)
         add(::FixThirdPartyLaunchersWidgets)
+        add(::NHB)
     }.toTypedArray()
 
     // ══════════════════════════════════════════════════════

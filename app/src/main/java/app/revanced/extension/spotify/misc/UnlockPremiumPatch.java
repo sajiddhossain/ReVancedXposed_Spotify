@@ -40,17 +40,9 @@ public final class UnlockPremiumPatch {
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
             new OverrideAttribute("ads", FALSE),
-            new OverrideAttribute("player-license", "premium"),
-            new OverrideAttribute("player-license-v2", "premium"),
-            new OverrideAttribute("shuffle", FALSE),
-            new OverrideAttribute("on-demand", TRUE),
-            new OverrideAttribute("streaming", TRUE),
-            new OverrideAttribute("pick-and-shuffle", FALSE),
-            new OverrideAttribute("streaming-rules", ""),
-            new OverrideAttribute("nft-disabled", "1"),
-            new OverrideAttribute("type", "premium"),
-            new OverrideAttribute("can_use_superbird", TRUE, false),
-            new OverrideAttribute("tablet-free", FALSE, false)
+            new OverrideAttribute("catalogue", "premium", false),
+            new OverrideAttribute("type", "premium", false),
+            new OverrideAttribute("nft-disabled", "1", false)
     );
 
     /**
