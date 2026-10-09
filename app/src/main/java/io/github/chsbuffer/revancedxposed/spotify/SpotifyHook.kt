@@ -90,14 +90,6 @@ class SpotifyHook(
                             return
                         }
 
-                        // Rewrite product=0 (free) to product=9 (premium) in storage-resolve
-                        if (url.contains("storage-resolve") && url.contains("product=0")) {
-                            val newUrl = url.replace("product=0", "product=9")
-                            urlField.set(req, newUrl)
-                            XposedBridge.log("NHB REWRITE product=0->9: $newUrl")
-                            return
-                        }
-
                         // Log spclient requests to discover new detection endpoints
                         if (url.contains("spclient", true)) {
                             XposedBridge.log("NHB PASS spclient: $url")
@@ -106,7 +98,28 @@ class SpotifyHook(
                 }
             )
 
-            XposedBridge.log("NHB: NativeHttpConnection hook INSTALLED")
+            // Hook onHeaders to see server response codes
+            val httpResponse = cl.loadClass("com.spotify.core.http.HttpResponse")
+            XposedBridge.hookAllMethods(httpConnectionImpl, "onHeaders", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: HookParam) {
+                    val resp = param.args[0] ?: return
+                    val code = runCatching { XposedHelpers.callMethod(resp, "getStatusCode") }.getOrNull()
+                        ?: runCatching { XposedHelpers.getIntField(resp, "statusCode") }.getOrNull()
+                        ?: runCatching { XposedHelpers.getIntField(resp, "code") }.getOrNull()
+                    val fields = resp.javaClass.declaredFields.map { "${it.name}:${it.type.simpleName}" }.joinToString(",")
+                    XposedBridge.log("NHB RESP: code=$code class=${resp.javaClass.name} fields=[$fields]")
+                }
+            })
+
+            // Hook onError to see native errors
+            XposedBridge.hookAllMethods(httpConnectionImpl, "onError", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: HookParam) {
+                    val errorCode = param.args[0]
+                    XposedBridge.log("NHB onError: code=$errorCode")
+                }
+            })
+
+            XposedBridge.log("NHB: NativeHttpConnection hook INSTALLED (send+onHeaders+onError)")
 
         }.onFailure {
             XposedBridge.log("NHB error -> ${it.message}")
