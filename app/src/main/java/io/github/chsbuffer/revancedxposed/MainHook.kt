@@ -2,13 +2,7 @@ package io.github.chsbuffer.revancedxposed
 
 import android.app.Application
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
-import app.revanced.extension.shared.Utils
-import io.github.chsbuffer.revancedxposed.spotify.AdBlockHook
-import io.github.chsbuffer.revancedxposed.spotify.RoundyUIHook
-import io.github.chsbuffer.revancedxposed.spotify.SpotifyHook
-import io.github.chsbuffer.revancedxposed.spotify.ThemeHook
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
@@ -74,80 +68,40 @@ class MainHook : XposedModule() {
         }
     }
 
+    private val NHB_BLOCKED_SEGMENTS = listOf(
+        "/ad-logic/",
+        "/ads/v2/",
+        "/v1/ads/",
+        "/gabo-receiver-service/",
+    )
+
     private fun onApplicationAttached(app: Application, lpparam: PackageParam) {
         if (initialized) return
         initialized = true
 
-        Utils.setContext(app)
+        log(TAG, "NHB ad-blocker only mode — no DexKit, no classloader injection")
 
-        val prefs = getModulePrefs(app)
-
-        if (isReVancedPatched(lpparam)) {
-            Utils.showToastLong("ReVanced Xposed FE module does not work with patched app")
-            return
-        }
-        Utils.showToastLong("ReVanced Xposed FE is initializing, please wait...")
-
-        // --- SPOTIFY PATCHES ---
+        // --- NHB AD BLOCKER (direct, no BaseHook/DexKit) ---
         try {
-            SpotifyHook(app, lpparam).Hook()
-        } catch (e: Exception) {
-            log(TAG, "Spotify patches failed: ${e.message}", e)
-        }
+            val cl = lpparam.classLoader
+            val httpConn = cl.loadClass("com.spotify.core.http.NativeHttpConnection")
+            val httpReq = cl.loadClass("com.spotify.core.http.HttpRequest")
+            val urlField = httpReq.getDeclaredField("url")
+            urlField.isAccessible = true
 
-        // --- AD BLOCK ---
-        try {
-            if (prefs.getBoolean(PREF_ENABLE_ADBLOCK, true)) {
-                AdBlockHook(lpparam).hook()
-                log(TAG, "AdBlocker: Module activated")
-            }
+            XposedBridge.hookAllMethods(httpConn, "send", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: HookParam) {
+                    val req = param.args[0]
+                    val url = urlField.get(req) as? String ?: return
+                    if (NHB_BLOCKED_SEGMENTS.any { url.contains(it, true) }) {
+                        param.result = null
+                    }
+                }
+            })
+            log(TAG, "NHB: ad-blocker hook INSTALLED")
         } catch (e: Exception) {
-            log(TAG, "AdBlocker failed: ${e.message}", e)
-        }
-
-        // --- MONET BLOCK ---
-        try {
-            if (prefs.getBoolean(PREF_ENABLE_MONET, false)) {
-                ThemeHook(app, lpparam).hook()
-            }
-        } catch (e: Exception) {
-            log(TAG, "Monet Mod failed: ${e.message}", e)
-        }
-
-        // --- ROUNDY BLOCK ---
-        try {
-            if (prefs.getBoolean(PREF_ENABLE_ROUND_UI, false)) {
-                RoundyUIHook(lpparam).hook()
-            }
-        } catch (e: Exception) {
-            log(TAG, "Roundy Mod failed: ${e.message}", e)
+            log(TAG, "NHB failed: ${e.message}", e)
         }
     }
 
-    private fun isReVancedPatched(lpparam: PackageParam): Boolean {
-        return runCatching {
-            lpparam.classLoader.loadClass("app.revanced.extension.shared.Utils")
-        }.isSuccess || runCatching {
-            lpparam.classLoader.loadClass("app.revanced.extension.shared.utils.Utils")
-        }.isSuccess || runCatching {
-            lpparam.classLoader.loadClass("app.revanced.integrations.shared.Utils")
-        }.isSuccess || runCatching {
-            lpparam.classLoader.loadClass("app.revanced.integrations.shared.utils.Utils")
-        }.isSuccess
-    }
-
-    private fun getModulePrefs(app: Application): SharedPreferences {
-        return try {
-            getRemotePreferences(PREF_FILE)
-        } catch (t: Throwable) {
-            log(TAG, "Failed to get remote preferences: ${t.message}", t)
-            app.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
-        }
-    }
 }
-
-const val PREF_FILE = "spotify_prefs"
-const val PREF_ENABLE_PREMIUM = "enable_premium"
-const val PREF_ENABLE_ADBLOCK = "enable_adblock"
-const val PREF_ENABLE_MONET = "enable_monet"
-const val PREF_ENABLE_ROUND_UI = "enable_round_ui"
