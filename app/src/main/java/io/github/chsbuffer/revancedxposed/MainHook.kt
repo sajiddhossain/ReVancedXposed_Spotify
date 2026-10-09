@@ -89,11 +89,19 @@ class MainHook : XposedModule() {
             val urlField = httpReq.getDeclaredField("url")
             urlField.isAccessible = true
 
+            // Log send() return type for debugging
+            val sendMethods = httpConn.declaredMethods.filter { it.name == "send" }
+            for (m in sendMethods) {
+                log(TAG, "NHB: send() signature: ${m.returnType.name} send(${m.parameterTypes.joinToString { it.name }})")
+            }
+
             XposedBridge.hookAllMethods(httpConn, "send", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: HookParam) {
                     val req = param.args[0]
                     val url = urlField.get(req) as? String ?: return
+
                     if (NHB_BLOCKED_SEGMENTS.any { url.contains(it, true) }) {
+                        log(TAG, "NHB BLOCKED: $url")
                         param.result = null
                     }
                 }
