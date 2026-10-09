@@ -90,7 +90,7 @@ class MainHook : XposedModule() {
 
         // --- SPOTIFY PATCHES ---
         try {
-            SpotifyHook(app, lpparam, prefs.getBoolean(PREF_ENABLE_PREMIUM, true)).Hook()
+            SpotifyHook(app, lpparam).Hook()
         } catch (e: Exception) {
             log(TAG, "Spotify patches failed: ${e.message}", e)
         }
