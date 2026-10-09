@@ -52,6 +52,7 @@ class SpotifyHook(
         "/v1/pigeon/",
         "/eventdelivery/",
         "/event-service/",
+        "pitoken/",
     )
 
     fun NHB() {
@@ -100,6 +101,39 @@ class SpotifyHook(
 
         }.onFailure {
             XposedBridge.log("NHB error -> ${it.message}")
+        }
+
+        // --- Play Integrity neutralization ---
+        runCatching {
+            val oii1Class = classLoader.loadClass("p.oii1")
+            XposedBridge.hookAllMethods(oii1Class, "a", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: HookParam) {
+                    XposedBridge.log("NHB: Play Integrity warmup BLOCKED (oii1.a)")
+                    param.result = null
+                }
+            })
+            XposedBridge.log("NHB: Play Integrity warmup hook INSTALLED (oii1)")
+        }.onFailure {
+            XposedBridge.log("NHB: Play Integrity warmup hook FAILED: ${it.message}")
+        }
+
+        runCatching {
+            val ukj1Class = classLoader.loadClass("p.ukj1")
+            XposedBridge.hookAllMethods(ukj1Class, "g", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: HookParam) {
+                    XposedBridge.log("NHB: Play Integrity token acquire BLOCKED (ukj1.g)")
+                    param.result = null
+                }
+            })
+            XposedBridge.hookAllMethods(ukj1Class, "i", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: HookParam) {
+                    XposedBridge.log("NHB: Play Integrity token init BLOCKED (ukj1.i)")
+                    param.result = null
+                }
+            })
+            XposedBridge.log("NHB: Play Integrity token hook INSTALLED (ukj1)")
+        }.onFailure {
+            XposedBridge.log("NHB: Play Integrity token hook FAILED: ${it.message}")
         }
     }
 }
