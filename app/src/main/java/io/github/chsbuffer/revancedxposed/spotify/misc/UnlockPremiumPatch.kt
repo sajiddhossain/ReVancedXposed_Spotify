@@ -25,21 +25,34 @@ fun SpotifyHook.UnlockPremium() {
 
     XposedBridge.log("UnlockPremium: starting hook setup")
 
-    // --- 1. ATTRIBUTE UNLOCK (CORE PREMIUM) ---
+    // --- 1a. ATTRIBUTE UNLOCK via getter (legacy path) ---
     runCatching {
         ::productStateProtoFingerprint.hookMethod {
             after { param ->
-                val result = param.result as? Map<String, *> ?: run {
-                    XposedBridge.log("UnlockPremium: productStateProto fired but result is null or not Map (${param.result?.javaClass})")
-                    return@after
-                }
-                XposedBridge.log("UnlockPremium: productStateProto FIRED, map keys=${result.keys.take(5)}, size=${result.size}")
+                val result = param.result as? Map<String, *> ?: return@after
+                XposedBridge.log("UnlockPremium: productStateProto.n() FIRED, size=${result.size}")
                 UnlockPremiumPatch.overrideAttributes(result)
-                XposedBridge.log("UnlockPremium: overrideAttributes done")
             }
         }
-        XposedBridge.log("UnlockPremium: productStateProto hook INSTALLED OK")
-    }.onFailure { XposedBridge.log("UnlockPremium: productStateProto hook FAILED: ${it.message}") }
+        XposedBridge.log("UnlockPremium: productStateProto getter hook INSTALLED")
+    }.onFailure { XposedBridge.log("UnlockPremium: productStateProto getter hook FAILED: ${it.message}") }
+
+    // --- 1b. ATTRIBUTE UNLOCK via parser q(byte[]) (9.1.90+: getter is never called) ---
+    runCatching {
+        val protoClass = classLoader.loadClass("com.spotify.remoteconfig.internal.ProductStateProto")
+        val parseMethod = protoClass.getDeclaredMethod("q", ByteArray::class.java)
+        XposedBridge.hookMethod(parseMethod, object : XC_MethodHook() {
+            override fun afterHookedMethod(param: HookParam) {
+                val proto = param.result ?: return
+                val valuesField = proto.javaClass.getDeclaredField("values_")
+                valuesField.isAccessible = true
+                val values = valuesField.get(proto) as? Map<String, *> ?: return
+                XposedBridge.log("UnlockPremium: q(byte[]) FIRED, values size=${values.size}, keys=${values.keys.take(5)}")
+                UnlockPremiumPatch.overrideAttributes(values)
+            }
+        })
+        XposedBridge.log("UnlockPremium: productStateProto parser hook INSTALLED on $parseMethod")
+    }.onFailure { XposedBridge.log("UnlockPremium: productStateProto parser hook FAILED: ${it.message}") }
 
     // --- 2. POPULAR TRACKS (ARTIST PAGE) ---
     runCatching {

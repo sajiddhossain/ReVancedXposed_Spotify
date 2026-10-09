@@ -113,12 +113,21 @@ public final class UnlockPremiumPatch {
                 }
 
                 if (overrideValue.equals(originalValue)) {
-                    Log.d("ReVancedXposed", "Attribute " + override.key + " already correct: " + originalValue);
                     continue;
                 }
 
                 Log.i("ReVancedXposed", "Overriding " + override.key + ": " + originalValue + " -> " + overrideValue);
                 XposedHelpers.setObjectField(attribute, "value_", overrideValue);
+                // Fix valueCase_ to match the new type (2=bool, 3=long, 4=string)
+                int valueCase;
+                if (overrideValue instanceof Boolean) {
+                    valueCase = 2;
+                } else if (overrideValue instanceof Long) {
+                    valueCase = 3;
+                } else {
+                    valueCase = 4; // String
+                }
+                XposedHelpers.setIntField(attribute, "valueCase_", valueCase);
             }
             Log.i("ReVancedXposed", "overrideAttributes complete");
         } catch (Exception ex) {
