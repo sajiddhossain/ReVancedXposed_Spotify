@@ -39,33 +39,14 @@ public final class UnlockPremiumPatch {
     }
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
-            // Disable advertisements
             new OverrideAttribute("ads", FALSE),
-            // Works along on-demand, allows playing any song without restriction.
-            new OverrideAttribute("player-license", "premium"),
-            // Secondary license flag
-            new OverrideAttribute("player-license-v2", "premium"),
-            // Disables shuffle being initially enabled when first playing a playlist.
             new OverrideAttribute("shuffle", FALSE),
-            // Allows playing any song on-demand, without a shuffled order.
             new OverrideAttribute("on-demand", TRUE),
-            // Make sure playing songs is not disabled remotely and playlists show up.
             new OverrideAttribute("streaming", TRUE),
-            // Allows adding songs to queue and removes the smart shuffle mode restriction,
-            // allowing to pick any of the other modes. Flag is not present in legacy app target.
             new OverrideAttribute("pick-and-shuffle", FALSE),
-            // Disables shuffle-mode streaming-rule, which forces songs to be played shuffled
-            // and breaks the player when other patches are applied.
             new OverrideAttribute("streaming-rules", ""),
-            // Enables premium UI in settings and removes the premium button in the nav-bar.
             new OverrideAttribute("nft-disabled", "1"),
-            // Product type flag
-            new OverrideAttribute("type", "premium"),
-            // Enable Spotify Car Thing hardware device.
-            // Device is discontinued and no longer works with the latest releases,
-            // but it might still work with older app targets.
             new OverrideAttribute("can_use_superbird", TRUE, false),
-            // Removes the premium button in the nav-bar for tablet users.
             new OverrideAttribute("tablet-free", FALSE, false)
     );
 
