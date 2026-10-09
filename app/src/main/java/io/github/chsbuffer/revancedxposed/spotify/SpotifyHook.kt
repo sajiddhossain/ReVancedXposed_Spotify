@@ -24,7 +24,7 @@ class SpotifyHook(
         if (enablePremium) add(::UnlockPremium)
         add(::LogOutPatch)
         add(::FixThirdPartyLaunchersWidgets)
-        // add(::NHB)
+        add(::NHB)
     }.toTypedArray()
 
     // ══════════════════════════════════════════════════════
@@ -37,11 +37,21 @@ class SpotifyHook(
     // ══════════════════════════════════════════════════════
     // NHB → NATIVE HTTP BLOCK (targeted)
     // ══════════════════════════════════════════════════════
-    private val NHB_BLOCKED_SEGMENTS = listOf(
+    private val NHB_BLOCKED_AD_SEGMENTS = listOf(
         "/ad-logic/",
         "/ads/v2/",
         "/v1/ads/",
         "/gabo-receiver-service/",
+    )
+
+    private val NHB_BLOCKED_DETECTION_SEGMENTS = listOf(
+        "melody/v1/check",
+        "reachability/check",
+        "dual-sync",
+        "social-connect",
+        "/v1/pigeon/",
+        "/eventdelivery/",
+        "/event-service/",
     )
 
     fun NHB() {
@@ -66,13 +76,27 @@ class SpotifyHook(
                         val req = param.args[0]
                         val url = urlField.get(req) as? String ?: return
 
-                        if (NHB_BLOCKED_SEGMENTS.any { url.contains(it, true) }) {
-                            XposedBridge.log("NHB BLOCK: $url")
+                        if (NHB_BLOCKED_AD_SEGMENTS.any { url.contains(it, true) }) {
+                            XposedBridge.log("NHB AD-BLOCK: $url")
                             param.result = null
+                            return
+                        }
+
+                        if (NHB_BLOCKED_DETECTION_SEGMENTS.any { url.contains(it, true) }) {
+                            XposedBridge.log("NHB DETECT-BLOCK: $url")
+                            param.result = null
+                            return
+                        }
+
+                        // Log spclient requests to discover new detection endpoints
+                        if (url.contains("spclient", true)) {
+                            XposedBridge.log("NHB PASS spclient: $url")
                         }
                     }
                 }
             )
+
+            XposedBridge.log("NHB: NativeHttpConnection hook INSTALLED")
 
         }.onFailure {
             XposedBridge.log("NHB error -> ${it.message}")
