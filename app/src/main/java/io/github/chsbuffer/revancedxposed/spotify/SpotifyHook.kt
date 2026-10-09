@@ -99,15 +99,19 @@ class SpotifyHook(
             )
 
             // Hook onHeaders to see server response codes
-            val httpResponse = cl.loadClass("com.spotify.core.http.HttpResponse")
             XposedBridge.hookAllMethods(httpConnectionImpl, "onHeaders", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: HookParam) {
                     val resp = param.args[0] ?: return
-                    val code = runCatching { XposedHelpers.callMethod(resp, "getStatusCode") }.getOrNull()
-                        ?: runCatching { XposedHelpers.getIntField(resp, "statusCode") }.getOrNull()
-                        ?: runCatching { XposedHelpers.getIntField(resp, "code") }.getOrNull()
+                    val code = runCatching {
+                        val f = resp.javaClass.getDeclaredField("statusCode")
+                        f.isAccessible = true
+                        f.getInt(resp)
+                    }.getOrNull() ?: runCatching {
+                        val m = resp.javaClass.getMethod("getStatusCode")
+                        m.invoke(resp) as Int
+                    }.getOrNull()
                     val fields = resp.javaClass.declaredFields.map { "${it.name}:${it.type.simpleName}" }.joinToString(",")
-                    XposedBridge.log("NHB RESP: code=$code class=${resp.javaClass.name} fields=[$fields]")
+                    XposedBridge.log("NHB RESP: code=$code fields=[$fields]")
                 }
             })
 
