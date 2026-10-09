@@ -105,3 +105,9 @@ class MainHook : XposedModule() {
     }
 
 }
+
+const val PREF_FILE = "spotify_prefs"
+const val PREF_ENABLE_PREMIUM = "enable_premium"
+const val PREF_ENABLE_ADBLOCK = "enable_adblock"
+const val PREF_ENABLE_MONET = "enable_monet"
+const val PREF_ENABLE_ROUND_UI = "enable_round_ui"
