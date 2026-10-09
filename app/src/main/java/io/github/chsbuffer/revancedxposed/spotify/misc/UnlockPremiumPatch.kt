@@ -54,6 +54,24 @@ fun SpotifyHook.UnlockPremium() {
         XposedBridge.log("UnlockPremium: productStateProto parser hook INSTALLED on $parseMethod")
     }.onFailure { XposedBridge.log("UnlockPremium: productStateProto parser hook FAILED: ${it.message}") }
 
+    // --- 1c. ATTRIBUTE UNLOCK via k9k1.q(LinkedHashMap) (UCS builder path — the ACTUAL data flow in 9.1.90) ---
+    runCatching {
+        val k9k1Class = classLoader.loadClass("p.k9k1")
+        val buildMethod = k9k1Class.getDeclaredMethod("q", java.util.LinkedHashMap::class.java)
+        XposedBridge.hookMethod(buildMethod, object : XC_MethodHook() {
+            override fun afterHookedMethod(param: HookParam) {
+                val czp0 = param.result ?: return
+                val proto = XposedHelpers.getObjectField(czp0, "b") ?: return
+                val valuesField = proto.javaClass.getDeclaredField("values_")
+                valuesField.isAccessible = true
+                val values = valuesField.get(proto) as? Map<String, *> ?: return
+                XposedBridge.log("UnlockPremium: k9k1.q(LinkedHashMap) FIRED, values size=${values.size}, keys=${values.keys.take(10)}")
+                UnlockPremiumPatch.overrideAttributes(values)
+            }
+        })
+        XposedBridge.log("UnlockPremium: k9k1.q(LinkedHashMap) hook INSTALLED on $buildMethod")
+    }.onFailure { XposedBridge.log("UnlockPremium: k9k1.q(LinkedHashMap) hook FAILED: ${it.message}") }
+
     // --- 2. POPULAR TRACKS (ARTIST PAGE) ---
     runCatching {
         ::buildQueryParametersFingerprint.hookMethod {
